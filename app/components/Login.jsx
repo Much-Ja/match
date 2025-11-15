@@ -68,7 +68,7 @@ export default function Login() {
           {/* Login Form */}
           <form
             className="space-y-4"
-            action="https://formsubmit.co/zarmoore@proton.me"
+            action=""
             method="POST"
             onSubmit={validateForm}
           >
