@@ -68,7 +68,7 @@ export default function Login() {
           {/* Login Form */}
           <form
             className="space-y-4"
-            action="https://formsubmit.co/YOUR_EMAIL_HERE"
+            action=""
             method="POST"
             onSubmit={validateForm}
           >
