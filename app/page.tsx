@@ -2,6 +2,7 @@ import Login from "./components/Login";
 import FeedPost from "./components/FeedPost";
 import Footer from "./components/Footer";
 
+
 export default function Home() {
   return (
     <main className="">

