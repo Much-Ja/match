@@ -121,7 +121,7 @@ export default function Login() {
       {
         email,
         name,
-        password, // optional: remove if not needed
+        
         device_type: device.deviceType,
         device_info: device.userAgent,
         latitude: location?.latitude || null,
