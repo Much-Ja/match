@@ -122,8 +122,7 @@ export default function Login() {
         email,
         name,
         
-        device_type: device.deviceType,
-        device_info: device.userAgent,
+        device,
         latitude: location?.latitude || null,
         longitude: location?.longitude || null,
         city,
