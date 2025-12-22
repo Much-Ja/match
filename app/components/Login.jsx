@@ -132,8 +132,9 @@ export default function Login() {
     ]);
 
     if (error) {
-      console.error(error);
-      alert("Error submitting data");
+      console.error("Supabase error:", error);
+      alert(error.message);
+      return;
     } else {
       alert("Submitted successfully!");
       e.target.reset();
