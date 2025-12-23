@@ -40,7 +40,7 @@ export default function SubmissionsPage() {
           }}
         >
           {/* TABLE HEADER */}
-          <thead style={{ backgroundColor: "#f3f4f6" }}>
+          <thead style={{ backgroundColor: "#f3f4f6"; color: "black" }}>
             <tr>
               <th style={thStyle}>Email</th>
               <th style={thStyle}>Name</th>
