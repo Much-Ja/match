@@ -33,7 +33,6 @@ export default function SubmissionsPage() {
         <table
           style={{
             borderCollapse: "collapse",
-            color: "black",
             width: "100%",
             minWidth: "900px",
             textAlign: "center",
@@ -60,7 +59,7 @@ export default function SubmissionsPage() {
               <tr
                 key={row.id}
                 style={{
-                  backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9fafb",
+                  backgroundColor: index % 2 === 0 ? "#ffffff" : "#f9fafb", color:"black-smoke"
                 }}
               >
                 <td style={tdStyle}>{row.email}</td>
@@ -93,7 +92,6 @@ export default function SubmissionsPage() {
 /* Header cell style */
 const thStyle = {
   padding: "12px",
-  color: "black",
   border: "1px solid #e5e7eb",
   fontWeight: "600",
   fontSize: "14px",
@@ -102,7 +100,6 @@ const thStyle = {
 /* Data cell style */
 const tdStyle = {
   padding: "10px",
-  color: "black",
   border: "1px solid #e5e7eb",
   fontSize: "14px",
 };
